@@ -1,13 +1,12 @@
-import { Injectable, HttpStatus, HttpCode, HttpException } from '@nestjs/common';
-import { SystemUsersService } from 'src/system-users/system-users.service';
+import { Injectable, HttpStatus, HttpException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
 // dto
-import {UserDto} from '../system-users/dto/user.dto';
+import { compareSync } from 'bcryptjs';
+import { SystemUsersService } from '../system-users/system-users.service';
+import { UserDto } from '../system-users/dto/user.dto';
 
-import { compare, compareSync } from 'bcryptjs';
-import { isObject } from 'util';
-import { Payload } from './dto/payload.dt';
+import { Payload } from './dto/payload.dto';
 import { Token } from './dto/token.dto';
 
 // entity
@@ -22,7 +21,8 @@ export class AuthService {
         const user = await this.systemUserService.findByEmail(email);
         
         if(user && compareSync(password, user.password)){
-            const {password, ...result} = user;
+            // eslint-disable-next-line no-shadow
+            const { password, ...result } = user;
             return result;
         }
         return null;
@@ -35,15 +35,13 @@ export class AuthService {
         }
     }
 
-    async login(userDto: UserDto): Promise<any> {
+    async login(userDto: UserDto): Promise<Token|any> {
         const user = await this.validateUser(userDto);
         console.log(user)
-        if(user != undefined){
-            const payload = {id : user.sysuserId, name : user.name, email : user.email}
-            this.generateToken(payload);
-        }
-        else {
+        if(user === null){
             throw new HttpException('Incorrect email or password',HttpStatus.INTERNAL_SERVER_ERROR)
-        };
+        }
+        const payload = {id : user.sysuserId, name : user.name, email : user.email}
+        return this.generateToken(payload);
     }
 }
